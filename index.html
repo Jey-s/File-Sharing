@@ -95,8 +95,14 @@ svg.i{width:18px;height:18px;flex:none}
 .lockline{display:flex;gap:8px;align-items:flex-start;color:var(--mute);font-size:13px;margin:0 0 14px}
 .lockline svg{width:16px;height:16px;color:var(--ok);flex:none;margin-top:2px}
 .modal{position:fixed;inset:0;background:rgba(5,7,14,.82);display:flex;align-items:center;justify-content:center;padding:16px;z-index:70}
-.modal .box{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:24px;max-width:380px;width:100%}
+.modal .box{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:24px;max-width:400px;width:100%;max-height:92vh;overflow:auto}
 .modal .box p{margin:0}
+.vcode{margin:16px 0 0;text-align:center;font:700 34px var(--display);letter-spacing:.16em;color:var(--amber);background:var(--raised);border-radius:12px;padding:12px 8px}
+.hint{color:var(--mute);font-size:13px;margin:8px 0 0}
+.opts{margin-top:16px}
+.opt{display:grid;grid-template-columns:22px 1fr;gap:12px;color:var(--mute);font-size:14px;margin-top:14px;cursor:pointer}
+.opt strong{display:block;color:var(--text);font-weight:600}
+.opt input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--amber)}
 .modal .row{display:flex;gap:10px;margin-top:18px}.modal .row button{flex:1}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--raised);border:1px solid var(--line);padding:10px 16px;border-radius:12px;font-size:14px;z-index:60;max-width:90vw}
 </style>
@@ -136,18 +142,25 @@ svg.i{width:18px;height:18px;flex:none}
   <label class="namefield">This device is called
       <input id="devName" type="text" maxlength="40" autocomplete="off" spellcheck="false" aria-label="This device’s name">
     </label>
+    <p class="hint">Browsers can’t read your device’s real name (such as the one Windows uses for Bluetooth), so this name is set by you and anyone could type any name. That’s why Beam also shows a verification code when you connect.</p>
+    <div class="panel opts">
+      <h2>Connection options</h2>
+      <label class="opt"><input type="checkbox" id="optRelay"><span><strong>Allow a relay if a direct connection isn’t possible</strong>Helps on strict networks or mobile data. Files stay encrypted, but they pass through a relay server run by PeerJS. Changing this gives this device a new code.</span></label>
+      <label class="opt"><input type="checkbox" id="optGeo" checked><span><strong>Show the other device’s approximate location</strong>Looks up its IP address in a public IP-location service (ipwho.is) to show a city. Nothing else is sent.</span></label>
+    </div>
     <div class="panel priv">
       <h2>Private by design</h2>
       <ul>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span><strong>Nothing is stored.</strong> Not on GitHub, not on any server. Your photos and videos are never uploaded. They exist only on your two devices, and only until you save them or close the page.</span></li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h13M17 4l3 3-3 3M17 17H4M7 14l-3 3 3 3"/></svg><span><strong>A direct, encrypted connection.</strong> Files travel straight from one device to the other, encrypted end to end. No server or relay sits in the middle of a transfer.</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h13M17 4l3 3-3 3M17 17H4M7 14l-3 3 3 3"/></svg><span id="privDirect"><strong>A direct, encrypted connection.</strong> Files travel straight from one device to the other, encrypted end to end. No server or relay sits in the middle of a transfer.</span></li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg><span><strong>Pairing only.</strong> A free public service (PeerJS) briefly helps your devices find each other. It handles the pairing code and connection details, never your files, and public lookup servers only tell each device its own address. Each device learns the other’s IP address, and you see it before you allow a connection.</span></li>
+        <li id="privGeo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span><strong>Location lookup (optional).</strong> While this is on, the other device’s IP address is sent to a public IP-location service (ipwho.is) to show an approximate city. No file data is involved.</span></li>
       </ul>
     </div>
   </section>
 
   <section id="xfer" hidden>
-    <p class="lockline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>Encrypted directly between your two devices. Nothing is uploaded or stored anywhere.</span></p>
+    <p class="lockline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span id="lockText">Encrypted directly between your two devices. Nothing is uploaded or stored anywhere.</span></p>
     <div id="banner" class="banner" hidden>
       <span>The other device disconnected.</span>
       <button id="bAgain">Pair again</button>
@@ -170,7 +183,20 @@ svg.i{width:18px;height:18px;flex:none}
   </section>
 </main>
 
-<div id="modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="box"><h2 id="mTitle">Allow this device to connect?</h2><p id="mText" style="color:var(--mute)"></p><dl class="details"><div><dt>Device name</dt><dd id="mName"></dd></div><div><dt>IP address</dt><dd id="mIp">Checking…</dd></div><div><dt>Network</dt><dd id="mNet"></dd></div></dl><p class="fine" style="color:var(--mute);font-size:13px;margin-top:12px">The name is chosen by the other device. The IP address is read from the connection itself. Files stay encrypted and are never stored anywhere.</p><div class="row"><button id="mDeny" class="ghost">Deny</button><button id="mAllow">Allow</button></div></div></div>
+<div id="modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="box">
+  <h2 id="mTitle">Connect to this device?</h2>
+  <p id="mText" style="color:var(--mute)">Check that the verification code is the same on both devices. If it isn’t, or you don’t recognise the device, tap Deny.</p>
+  <div id="mCode" class="vcode" aria-label="Verification code">······</div>
+  <dl class="details">
+    <div><dt>Device name</dt><dd id="mName">…</dd></div>
+    <div><dt>IP address</dt><dd id="mIp">Checking…</dd></div>
+    <div><dt>Network</dt><dd id="mNet"></dd></div>
+    <div><dt>Approx. location</dt><dd id="mLoc">Checking…</dd></div>
+  </dl>
+  <p class="fine" style="color:var(--mute);font-size:13px;margin-top:12px">The name is chosen by the other device and can be faked. The code and IP address come from the connection itself. Files stay encrypted and are never stored anywhere.</p>
+  <div class="row" id="mActions"><button id="mDeny" class="ghost">Deny</button><button id="mAllow">Allow</button></div>
+  <p id="mWait" class="fine" style="color:var(--mute);margin-top:16px" hidden>Waiting for the other device to confirm…</p>
+</div></div>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
@@ -178,12 +204,13 @@ const $ = id => document.getElementById(id);
 const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const PREFIX = 'beamxfer-';
 const CHUNK = 16384, HIGH = 1 << 20, CODELEN = 8;
+const relayAllowed = () => $('optRelay').checked;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const fmt = n => n >= 1e9 ? (n/1e9).toFixed(2)+' GB' : n >= 1e6 ? (n/1e6).toFixed(1)+' MB' : Math.max(1, Math.round(n/1e3))+' KB';
 const cleanCode = s => { s = String(s||''); if (s.includes('#')) s = s.split('#').pop(); return s.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,CODELEN); };
 const genCode = () => Array.from(crypto.getRandomValues(new Uint8Array(CODELEN)), b => ALPHA[b % 32]).join('');
 
-let peer, conn = null, approved = false, pending = null, approveTimer = null, peerName = '', myCode = '', incoming = null, queue = Promise.resolve(), wake = null, joinTimer = null;
+let peer, conn = null, approved = false, pending = null, approveTimer = null, peerName = '', localOk = false, remoteOk = false, hs = null, myCode = '', incoming = null, queue = Promise.resolve(), wake = null, joinTimer = null;
 
 function setStatus(text, kind){ $('status').textContent = text; $('pill').className = 'pill ' + (kind||'wait'); }
 function toast(msg){ const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3500); }
@@ -203,7 +230,7 @@ function showMyCode(){
 
 function startPeer(){
   myCode = genCode();
-  const p = peer = new Peer(PREFIX + myCode, {config: {iceServers: [{urls: 'stun:stun.l.google.com:19302'}, {urls: 'stun:stun1.l.google.com:19302'}]}});
+  const p = peer = new Peer(PREFIX + myCode, relayAllowed() ? {} : {config: {iceServers: [{urls: 'stun:stun.l.google.com:19302'}, {urls: 'stun:stun1.l.google.com:19302'}]}});
   p.on('open', () => {
     showMyCode();
     setStatus('Ready to pair', 'wait');
@@ -211,8 +238,8 @@ function startPeer(){
     if (h.length === CODELEN && h !== myCode) join(h);
   });
   p.on('connection', c => {
-    if (conn || pending) { c.on('open', () => { try { c.send(JSON.stringify({t: 'busy'})); } catch(e){} setTimeout(() => { try { c.close(); } catch(e){} }, 300); }); return; }
-    askApproval(c);
+    if (conn) { c.on('open', () => { try { c.send(JSON.stringify({t: 'busy'})); } catch(e){} setTimeout(() => { try { c.close(); } catch(e){} }, 300); }); return; }
+    c.isIncoming = true; handshake(c);
   });
   p.on('disconnected', () => { if (!conn && !p.destroyed) { setStatus('Reconnecting…', 'wait'); try { p.reconnect(); } catch(e){} } });
   p.on('error', err => {
@@ -230,48 +257,21 @@ function join(code){
   let c;
   try { c = peer.connect(PREFIX + code, {reliable: true, serialization: 'raw', metadata: {label: myName()}}); }
   catch(e){ return joinFail('Couldn’t start the connection. Reload and try again.'); }
-  setup(c);
-  c.on('open', () => {
-    clearTimeout(joinTimer);
-    setStatus('Waiting for approval…', 'wait');
-    setErr('Approve the connection on the other device.', true);
-    joinTimer = setTimeout(() => { if (!approved) joinFail('The other device didn’t approve the connection in time.'); }, 70000);
-  });
+  c.isIncoming = false; handshake(c);
   clearTimeout(joinTimer);
-  joinTimer = setTimeout(() => { if (conn && !conn.open) joinFail('Couldn’t reach that device directly. Beam never sends files through a relay, so both devices need a network that allows direct connections. The same Wi-Fi works best.'); }, 20000);
+  joinTimer = setTimeout(() => { if (conn && !conn.open) joinFail(relayAllowed() ? 'Couldn’t reach that device. Check the code, and make sure Beam is open on both devices.' : 'Couldn’t reach that device directly. With relays turned off, both devices need a network that allows direct connections. The same Wi-Fi works best.'); }, 20000);
+}
+function resetHandshake(){
+  clearTimeout(approveTimer); clearTimeout(joinTimer);
+  localOk = false; remoteOk = false; hs = null; $('modal').hidden = true;
 }
 function joinFail(msg){
-  clearTimeout(joinTimer);
-  const c = conn; conn = null;
+  const c = conn; conn = null; resetHandshake();
   if (c && !approved) { try { c.close(); } catch(e){} }
-  $('bJoin').disabled = false;
-  setStatus('Ready to pair', 'wait'); setErr(msg);
+  $('bJoin').disabled = false; setStatus('Ready to pair', 'wait'); setErr(msg);
 }
 
-function setup(c){
-  conn = c;
-  c.on('data', onData);
-  c.on('close', onClose);
-  c.on('error', e => { console.warn(e); if (!approved && conn === c) joinFail('Couldn’t connect to that device.'); });
-}
-function enter(){
-  approved = true; clearTimeout(joinTimer); setErr('');
-  $('pair').hidden = true; $('xfer').hidden = false; $('banner').hidden = true;
-  setStatus(peerName ? 'Connected to ' + peerName : 'Connected', 'on');
-  try { navigator.wakeLock?.request('screen').then(w => { wake = w; }).catch(() => {}); } catch(e){}
-}
-function onClose(){
-  const was = approved;
-  conn = null; incoming = null; approved = false; peerName = '';
-  try { wake?.release(); } catch(e){} wake = null;
-  if (was) { setStatus('Disconnected', 'off'); $('banner').hidden = false; }
-  else {
-    clearTimeout(joinTimer); $('bJoin').disabled = false; setStatus('Ready to pair', 'wait');
-    const e = $('err'); if (!e.textContent || e.classList.contains('note')) setErr('The other device closed the connection.');
-  }
-}
-
-/* ---------- approving incoming connections ---------- */
+/* ---------- handshake: both devices must confirm ---------- */
 const isPrivate = ip => /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|fe80:|f[cd][0-9a-f]{2}:)/i.test(ip);
 async function remoteInfo(c){
   try {
@@ -280,40 +280,147 @@ async function remoteInfo(c){
     stats.forEach(r => { map[r.id] = r; });
     stats.forEach(r => { if (r.type === 'transport' && r.selectedCandidatePairId) pair = map[r.selectedCandidatePairId]; });
     if (!pair) stats.forEach(r => { if (r.type === 'candidate-pair' && (r.selected || (r.nominated && r.state === 'succeeded'))) pair = r; });
-    const rc = pair && map[pair.remoteCandidateId];
-    return rc ? {ip: rc.address || rc.ip || ''} : null;
+    const rc = pair && map[pair.remoteCandidateId], lc = pair && map[pair.localCandidateId];
+    if (!rc) return null;
+    return {ip: rc.address || rc.ip || '', relay: rc.candidateType === 'relay' || (lc && lc.candidateType === 'relay')};
   } catch(e){ return null; }
 }
-function askApproval(c){
-  pending = c;
-  c.on('data', () => {});   // ignore everything until approved
-  c.on('close', () => {
-    if (pending === c) { pending = null; clearTimeout(approveTimer); $('modal').hidden = true; toast('The connection request was cancelled.'); }
-  });
+async function verifyCode(c){
+  try {
+    const grab = d => { const m = d && d.sdp && d.sdp.match(/a=fingerprint:\S+\s+([0-9A-Fa-f:]+)/); return m ? m[1].toUpperCase() : ''; };
+    const pc = c.peerConnection;
+    const [x, y] = [grab(pc.localDescription), grab(pc.remoteDescription)].sort();
+    if (!x || !y) return '';
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(x + '|' + y));
+    return String(new DataView(buf).getUint32(0) % 1000000).padStart(6, '0');
+  } catch(e){ return ''; }
+}
+async function lookupLocation(ip){
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 5000);
+    const r = await fetch('https://ipwho.is/' + encodeURIComponent(ip), {signal: ctl.signal}); clearTimeout(t);
+    const j = await r.json();
+    if (!j.success) return 'Unknown';
+    return [j.city, j.region, j.country].filter(Boolean).join(', ') || 'Unknown';
+  } catch(e){ return 'Couldn’t look it up'; }
+}
+function renderModal(){
+  if (!hs) return;
+  $('mName').textContent = hs.name || '…';
+  $('mCode').textContent = hs.code ? hs.code.slice(0, 3) + ' ' + hs.code.slice(3) : (hs.ready ? 'Unavailable' : '······');
+  const ip = hs.ip;
+  if (!hs.ready) { $('mIp').textContent = 'Checking…'; $('mNet').textContent = ''; }
+  else if (hs.relay) { $('mIp').textContent = 'Hidden by relay'; $('mNet').textContent = 'Through a relay (encrypted)'; }
+  else if (ip && !/\.local$/i.test(ip)) { $('mIp').textContent = ip; $('mNet').textContent = isPrivate(ip) ? 'Same local network' : 'Over the internet'; }
+  else { $('mIp').textContent = 'Hidden by the browser'; $('mNet').textContent = ip ? 'Same local network' : 'Unknown'; }
+}
+async function renderLoc(c){
+  const el = $('mLoc'), ip = hs.ip;
+  const local = !ip || /\.local$/i.test(ip) || isPrivate(ip);
+  if (hs.relay) el.textContent = 'Not available through a relay';
+  else if (local) el.textContent = ip ? 'On your local network' : 'Unknown';
+  else if (!$('optGeo').checked) el.textContent = 'Lookup turned off';
+  else {
+    el.textContent = 'Looking up…';
+    const loc = await lookupLocation(ip);
+    if (conn === c && hs) el.textContent = loc + ' (approximate)';
+  }
+}
+function handshake(c){
+  conn = c; localOk = false; remoteOk = false;
+  hs = {name: '', ip: '', code: '', relay: false, ready: false};
+  c.on('data', onData);
+  c.on('close', () => onClose(c));
+  c.on('error', e => { console.warn(e); if (!approved && conn === c) { if (c.isIncoming) dropIncoming(); else joinFail('Couldn’t connect to that device.'); } });
   c.on('open', async () => {
-    const who = (c.metadata && typeof c.metadata.label === 'string' && c.metadata.label.trim()) ? c.metadata.label.trim().slice(0, 40) : 'Unknown device';
-    c.peerName = who;
-    $('mText').textContent = 'A device wants to connect and exchange files. Allow it only if it’s your own and you just entered or scanned this code.';
-    $('mName').textContent = who; $('mIp').textContent = 'Checking…'; $('mNet').textContent = '';
-    $('modal').hidden = false; $('mDeny').focus();
-    clearTimeout(approveTimer); approveTimer = setTimeout(() => decide(false), 60000);
-    const info = await remoteInfo(c);
-    if (pending !== c) return;
-    const ip = info && info.ip;
-    if (ip && !/\.local$/i.test(ip)) { $('mIp').textContent = ip; $('mNet').textContent = isPrivate(ip) ? 'Same local network' : 'Over the internet'; }
-    else { $('mIp').textContent = 'Hidden by the browser'; $('mNet').textContent = ip ? 'Same local network' : 'Unknown'; }
+    clearTimeout(joinTimer);
+    try { c.send(JSON.stringify({t: 'hello', label: myName()})); } catch(e){}
+    if (c.metadata && typeof c.metadata.label === 'string') hs.name = c.metadata.label.trim().slice(0, 40);
+    setStatus('Confirm on both devices', 'wait'); setErr('');
+    $('modal').hidden = false; $('mActions').hidden = false; $('mWait').hidden = true; $('mLoc').textContent = 'Checking…';
+    renderModal(); $('mDeny').focus();
+    clearTimeout(approveTimer); approveTimer = setTimeout(() => { if (conn === c && !approved) decide(false); }, 60000);
+    const [info, code] = await Promise.all([remoteInfo(c), verifyCode(c)]);
+    if (conn !== c || approved) return;
+    hs.ip = (info && info.ip) || ''; hs.relay = !!(info && info.relay); hs.code = code; hs.ready = true;
+    renderModal(); renderLoc(c);
   });
 }
+function handshakeMsg(m){
+  if (!hs || !conn) return;
+  if (m.t === 'hello') { if (typeof m.label === 'string' && m.label.trim()) { hs.name = m.label.trim().slice(0, 40); renderModal(); } }
+  else if (m.t === 'ok') { remoteOk = true; if (localOk) enter(); }
+  else if (m.t === 'no') { if (conn.isIncoming) { toast('The other device denied the connection.'); dropIncoming(); } else joinFail('The other device denied the connection.'); }
+  else if (m.t === 'busy') joinFail('That device is already connected to, or pairing with, another device.');
+}
+function dropIncoming(){
+  const c = conn; conn = null; resetHandshake();
+  try { c && c.close(); } catch(e){}
+  setStatus('Ready to pair', 'wait');
+}
 function decide(ok){
-  const c = pending; if (!c) return;
-  pending = null; clearTimeout(approveTimer); $('modal').hidden = true;
-  if (ok && c.open) { try { c.send(JSON.stringify({t: 'ok', label: myName()})); } catch(e){} peerName = c.peerName || ''; setup(c); enter(); return; }
+  const c = conn; if (!c || approved) return;
+  if (ok) {
+    if (localOk) return;
+    localOk = true;
+    try { c.send(JSON.stringify({t: 'ok'})); } catch(e){}
+    $('mActions').hidden = true; $('mWait').hidden = false;
+    if (remoteOk) enter();
+    return;
+  }
   try { c.send(JSON.stringify({t: 'no'})); } catch(e){}
-  toast('Connection denied. This device now has a new code.');
-  setTimeout(() => { try { c.close(); } catch(e){} try { peer.destroy(); } catch(e){} startPeer(); }, 400);
+  conn = null; resetHandshake();
+  if (c.isIncoming) {
+    toast('Connection denied. This device now has a new code.');
+    setTimeout(() => { try { c.close(); } catch(e){} try { peer.destroy(); } catch(e){} startPeer(); }, 400);
+  } else {
+    setTimeout(() => { try { c.close(); } catch(e){} }, 400);
+    $('bJoin').disabled = false; setStatus('Ready to pair', 'wait'); setErr('You denied the connection.');
+  }
+}
+function enter(){
+  approved = true; peerName = (hs && hs.name) || '';
+  const relay = hs && hs.relay;
+  clearTimeout(joinTimer); clearTimeout(approveTimer); $('modal').hidden = true; setErr('');
+  $('pair').hidden = true; $('xfer').hidden = false; $('banner').hidden = true;
+  setStatus(peerName ? 'Connected to ' + peerName : 'Connected', 'on');
+  $('lockText').textContent = relay
+    ? 'This connection goes through a relay server. It’s still encrypted end to end, so the relay can’t read your files. Nothing is stored anywhere.'
+    : 'Encrypted directly between your two devices. Nothing is uploaded or stored anywhere.';
+  try { navigator.wakeLock?.request('screen').then(w => { wake = w; }).catch(() => {}); } catch(e){}
+}
+function onClose(c){
+  if (conn !== c) return;
+  const was = approved;
+  conn = null; incoming = null; approved = false; peerName = '';
+  try { wake?.release(); } catch(e){} wake = null;
+  resetHandshake();
+  if (was) { setStatus('Disconnected', 'off'); $('banner').hidden = false; }
+  else {
+    $('bJoin').disabled = false; setStatus('Ready to pair', 'wait');
+    if (c.isIncoming) toast('The connection request was cancelled.');
+    else { const e = $('err'); if (!e.textContent || e.classList.contains('note')) setErr('The other device closed the connection.'); }
+  }
 }
 $('mAllow').onclick = () => decide(true);
 $('mDeny').onclick = () => decide(false);
+
+/* ---------- options ---------- */
+function updatePrivacy(){
+  $('privDirect').innerHTML = relayAllowed()
+    ? '<strong>Encrypted end to end.</strong> Files go straight between your devices when they can. If your network blocks that, they pass through a relay server. They stay encrypted, so the relay can’t read them.'
+    : '<strong>A direct, encrypted connection.</strong> Files travel straight from one device to the other, encrypted end to end. No server or relay sits in the middle of a transfer.';
+  $('privGeo').hidden = !$('optGeo').checked;
+}
+$('optRelay').onchange = e => {
+  if (conn) { e.target.checked = !e.target.checked; toast('Change this before connecting.'); return; }
+  updatePrivacy();
+  toast('Relay ' + (relayAllowed() ? 'allowed' : 'turned off') + '. This device has a new code.');
+  $('cpLink').disabled = true; $('bJoin').disabled = true;
+  try { peer.destroy(); } catch(err){} startPeer();
+};
+$('optGeo').onchange = updatePrivacy;
+
 function restart(){ history.replaceState(null, '', location.pathname); location.reload(); }
 
 $('codeIn').addEventListener('input', e => { e.target.value = cleanCode(e.target.value); setErr(''); });
@@ -416,10 +523,7 @@ drop.addEventListener('drop', e => sendFiles([...e.dataTransfer.files]));
 function onData(d){
   if (typeof d === 'string') {
     let m; try { m = JSON.parse(d); } catch(e){ return; }
-    if (m.t === 'ok') { if (conn && !approved) { peerName = typeof m.label === 'string' ? m.label.trim().slice(0, 40) : ''; enter(); } return; }
-    if (m.t === 'no') { if (!approved) joinFail('The other device denied the connection.'); return; }
-    if (m.t === 'busy') { if (!approved) joinFail('That device is already connected to, or pairing with, another device.'); return; }
-    if (!approved) return;
+    if (!approved) { handshakeMsg(m); return; }
     if (m.t === 'meta') {
       incoming = {m, parts: [], got: 0, ui: addItem({name: m.name, size: m.size, type: m.type || '', dir: 'in'})};
       if (m.size === 0) incoming.ui.progress(1);
@@ -435,9 +539,16 @@ function onData(d){
   }
 }
 
-window.addEventListener('hashchange', () => { const h = cleanCode(location.hash.slice(1)); if (peer && peer.open && !conn && !pending && h.length === CODELEN && h !== myCode) join(h); });
+window.addEventListener('hashchange', () => { const h = cleanCode(location.hash.slice(1)); if (peer && peer.open && !conn && h.length === CODELEN && h !== myCode) join(h); });
 window.addEventListener('beforeunload', () => { try { peer?.destroy(); } catch(e){} });
 $('devName').value = deviceLabel();
+(async () => {
+  try {
+    const h = await navigator.userAgentData?.getHighEntropyValues(['model']);
+    if (h && h.model && $('devName').value === deviceLabel()) $('devName').value = (h.model + ' (' + deviceLabel() + ')').slice(0, 40);
+  } catch(e){}
+})();
+updatePrivacy();
 startPeer();
 </script>
 </body>
