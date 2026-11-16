@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Beam – send photos and videos between devices</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e1a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📲%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0e1a;--surface:#121829;--raised:#1a2238;--line:#263052;
+  --text:#e8ecf8;--mute:#8c97b8;--amber:#ffb454;--amber-ink:#2a1a00;--ok:#5fd38d;--bad:#ff7a7a;
+  --display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 var(--body);-webkit-text-size-adjust:100%}
+body{min-height:100vh;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);
+  background:radial-gradient(900px 420px at 80% -10%,rgba(255,180,84,.09),transparent 60%),var(--bg)}
+main{max-width:920px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:28px}
+.brand{display:flex;align-items:center;gap:10px;font:700 22px var(--display);letter-spacing:-.01em}
+.brand svg{width:30px;height:30px}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:99px;background:var(--surface);border:1px solid var(--line);font-size:14px;color:var(--mute)}
+.pill i{width:9px;height:9px;border-radius:50%;background:var(--mute)}
+.pill.wait i{background:var(--amber);animation:pulse 1.4s infinite}
+.pill.on{color:var(--text)}.pill.on i{background:var(--ok)}
+.pill.off i{background:var(--bad)}
+@keyframes pulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.pill.wait i{animation:none}}
+
+h1{font:700 clamp(28px,6vw,40px)/1.1 var(--display);letter-spacing:-.02em;margin:0 0 8px}
+.lead{color:var(--mute);margin:0 0 26px;max-width:46ch}
+h2{font:700 18px var(--display);margin:0 0 6px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px}
+.panel p{color:var(--mute);margin:0 0 14px;font-size:15px}
+.grid{display:grid;gap:16px;grid-template-columns:1fr}
+@media(min-width:760px){.grid{grid-template-columns:1.15fr 1fr}}
+
+/* the memorable element: the code as tiles joined by a beam */
+.code{display:flex;gap:8px;margin:6px 0 18px}
+.code span{flex:1;max-width:64px;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;background:var(--raised);border:1px solid var(--line);border-radius:12px;font:700 clamp(26px,7vw,36px) var(--display);color:var(--amber)}
+.beam{height:2px;margin:0 0 18px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--amber),transparent);opacity:.55}
+.qr{display:inline-block;background:#fff;padding:10px;border-radius:12px;margin-bottom:14px;line-height:0}
+.qr img,.qr canvas{width:156px!important;height:156px!important}
+
+input[type=text]{width:100%;font:700 28px var(--display);letter-spacing:.3em;text-align:center;text-transform:uppercase;padding:14px 10px;border-radius:12px;border:1px solid var(--line);background:var(--raised);color:var(--text);margin-bottom:12px}
+input[type=text]::placeholder{color:var(--line);letter-spacing:.3em}
+input[type=text]:focus,button:focus-visible,.btn:focus-visible,.drop:focus-within{outline:2px solid var(--amber);outline-offset:2px}
+button,.btn{font:600 15px var(--body);display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;border:1px solid transparent;border-radius:12px;padding:12px 18px;background:var(--amber);color:var(--amber-ink);cursor:pointer}
+button.full{width:100%}
+button.ghost,.btn.ghost{background:transparent;color:var(--text);border-color:var(--line)}
+button.ghost:hover,.btn.ghost:hover{background:var(--raised)}
+button:disabled{opacity:.5;cursor:default}
+svg.i{width:18px;height:18px;flex:none}
+.err{color:var(--bad);font-size:14px;min-height:20px;margin:10px 0 0}
+
+.drop{display:block;text-align:center;border:2px dashed var(--line);border-radius:16px;padding:34px 16px;color:var(--mute);cursor:pointer;margin-bottom:12px;transition:border-color .15s,background .15s}
+.drop strong{display:block;color:var(--text);font:700 19px var(--display);margin-bottom:4px}
+.drop.over{border-color:var(--amber);background:rgba(255,180,84,.06)}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.banner{background:rgba(255,122,122,.1);border:1px solid rgba(255,122,122,.4);color:var(--text);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+
+.item{display:grid;grid-template-columns:64px 1fr;gap:6px 14px;padding:14px 0;border-top:1px solid var(--line);align-items:center}
+.item:first-child{border-top:0;padding-top:4px}
+.thumb{grid-row:span 2;width:64px;height:64px;border-radius:12px;background:var(--raised);overflow:hidden;display:flex;align-items:center;justify-content:center;border:0;padding:0;color:var(--mute);cursor:pointer}
+.thumb img,.thumb video{width:100%;height:100%;object-fit:cover;display:block}
+.name{font-weight:600;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sub{font-size:13px;color:var(--mute)}
+.sub.ok{color:var(--ok)}.sub.bad{color:var(--bad)}
+.bar{height:4px;background:var(--raised);border-radius:4px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;width:0;background:var(--amber)}
+.acts{grid-column:2;display:flex;gap:8px;flex-wrap:wrap}
+.acts .btn,.acts button{padding:9px 14px;font-size:14px}
+.empty{color:var(--mute);margin:0;font-size:15px}
+
+.lb{position:fixed;inset:0;background:rgba(5,7,14,.94);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.lb img,.lb video{max-width:100%;max-height:100%;border-radius:8px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--raised);border:1px solid var(--line);padding:10px 16px;border-radius:12px;font-size:14px;z-index:60;max-width:90vw}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="brand">
+      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="2" y="9" width="10" height="14" rx="3" stroke="#ffb454" stroke-width="2"/><rect x="20" y="6" width="10" height="20" rx="3" stroke="#e8ecf8" stroke-width="2"/><path d="M14 16h4" stroke="#ffb454" stroke-width="2" stroke-linecap="round"/></svg>
+      Beam
+    </div>
+    <div id="pill" class="pill wait"><i></i><span id="status">Starting…</span></div>
+  </header>
+
+  <section id="pair">
+    <h1>Send photos and videos between your phone and PC</h1>
+    <p class="lead">Open Beam on both devices, then pair them with a code or by scanning the QR code. Files go straight from one device to the other.</p>
+    <div class="grid">
+      <div class="panel">
+        <h2>This device’s code</h2>
+        <p>Enter it on your other device, or scan the QR code with its camera.</p>
+        <div id="code" class="code" aria-live="polite"></div>
+        <div class="beam"></div>
+        <div id="qr" class="qr" hidden></div>
+        <div><button id="cpLink" class="ghost" disabled>
+          <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
+          Copy link</button></div>
+      </div>
+      <div class="panel">
+        <h2>Got a code from another device?</h2>
+        <p>Type it here to connect.</p>
+        <input id="codeIn" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="5" placeholder="•••••" aria-label="Pairing code">
+        <button id="bJoin" class="full" disabled>Connect</button>
+        <p id="err" class="err" role="alert"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="xfer" hidden>
+    <div id="banner" class="banner" hidden>
+      <span>The other device disconnected.</span>
+      <button id="bAgain">Pair again</button>
+    </div>
+    <div class="panel" style="margin-bottom:16px">
+      <h2>Send to the other device</h2>
+      <p>Choose photos and videos, or drop files here.</p>
+      <label class="drop" id="drop"><strong>Choose photos and videos</strong>Tap to browse, or drag files in
+        <input id="file" type="file" multiple accept="image/*,video/*" hidden>
+      </label>
+      <div class="actions">
+        <label class="btn ghost">Send any file type<input id="fileAny" type="file" multiple hidden></label>
+        <button id="bDisc" class="ghost">Disconnect</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Transfers</h2>
+      <div id="list"><p id="empty" class="empty">Nothing yet. Files you send or receive show up here.</p></div>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const PREFIX = 'beamxfer-';
+const CHUNK = 16384, HIGH = 1 << 20;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const fmt = n => n >= 1e9 ? (n/1e9).toFixed(2)+' GB' : n >= 1e6 ? (n/1e6).toFixed(1)+' MB' : Math.max(1, Math.round(n/1e3))+' KB';
+const cleanCode = s => { s = String(s||''); if (s.includes('#')) s = s.split('#').pop(); return s.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,5); };
+const genCode = () => Array.from(crypto.getRandomValues(new Uint8Array(5)), b => ALPHA[b % 32]).join('');
+
+let peer, conn = null, myCode = '', incoming = null, queue = Promise.resolve(), wake = null, joinTimer = null;
+
+function setStatus(text, kind){ $('status').textContent = text; $('pill').className = 'pill ' + (kind||'wait'); }
+function toast(msg){ const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3500); }
+function setErr(msg){ $('err').textContent = msg || ''; }
+
+/* ---------- pairing ---------- */
+function showMyCode(){
+  $('code').innerHTML = '';
+  for (const ch of myCode){ const s = document.createElement('span'); s.textContent = ch; $('code').appendChild(s); }
+  const link = location.origin + location.pathname + '#' + myCode;
+  const q = $('qr'); q.innerHTML = ''; q.hidden = false;
+  try { new QRCode(q, {text: link, width: 156, height: 156, colorDark: '#0a0e1a', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M}); } catch(e){ q.hidden = true; }
+  $('cpLink').disabled = false; $('bJoin').disabled = false;
+}
+
+function startPeer(){
+  myCode = genCode();
+  peer = new Peer(PREFIX + myCode);
+  peer.on('open', () => {
+    showMyCode();
+    setStatus('Ready to pair', 'wait');
+    const h = cleanCode(location.hash.slice(1));
+    if (h.length === 5 && h !== myCode) join(h);
+  });
+  peer.on('connection', c => {
+    if (conn) { c.on('open', () => c.close()); return; }
+    setup(c);
+  });
+  peer.on('disconnected', () => { if (!conn) { setStatus('Reconnecting…', 'wait'); try { peer.reconnect(); } catch(e){} } });
+  peer.on('error', err => {
+    if (err.type === 'unavailable-id') { try { peer.destroy(); } catch(e){} startPeer(); return; }
+    if (err.type === 'peer-unavailable') { joinFail('No device found with that code. Check it, and make sure Beam is open on the other device.'); return; }
+    if (['network','server-error','socket-error','socket-closed','browser-incompatible'].includes(err.type)) {
+      setStatus('Offline', 'off'); setErr('Can’t reach the pairing service. Check your internet connection and reload.');
+    } else { console.warn(err); }
+  });
+}
+
+function join(code){
+  if (conn) return;
+  setErr(''); setStatus('Connecting…', 'wait'); $('bJoin').disabled = true;
+  let c;
+  try { c = peer.connect(PREFIX + code, {reliable: true, serialization: 'raw'}); }
+  catch(e){ return joinFail('Couldn’t start the connection. Reload and try again.'); }
+  setup(c);
+  clearTimeout(joinTimer);
+  joinTimer = setTimeout(() => { if (conn && !conn.open) joinFail('Connecting took too long. Check the code, or try both devices on the same Wi-Fi.'); }, 20000);
+}
+function joinFail(msg){
+  clearTimeout(joinTimer);
+  if (conn && !conn.open) { try { conn.close(); } catch(e){} }
+  conn = null; $('bJoin').disabled = false;
+  setStatus('Ready to pair', 'wait'); setErr(msg);
+}
+
+function setup(c){
+  conn = c;
+  c.on('open', async () => {
+    clearTimeout(joinTimer);
+    $('pair').hidden = true; $('xfer').hidden = false; $('banner').hidden = true;
+    setStatus('Connected', 'on');
+    try { wake = await navigator.wakeLock?.request('screen'); } catch(e){}
+  });
+  c.on('data', onData);
+  c.on('close', onClose);
+  c.on('error', e => { console.warn(e); if (!c.open) joinFail('Couldn’t connect to that device.'); });
+}
+function onClose(){
+  const was = conn && conn.open !== undefined;
+  conn = null; incoming = null;
+  try { wake?.release(); } catch(e){} wake = null;
+  if (!$('xfer').hidden) { setStatus('Disconnected', 'off'); $('banner').hidden = false; }
+  else if (was) { joinFail('The connection closed before it finished. Try again.'); }
+}
+function restart(){ history.replaceState(null, '', location.pathname); location.reload(); }
+
+$('codeIn').addEventListener('input', e => { e.target.value = cleanCode(e.target.value); setErr(''); });
+$('codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('bJoin').click(); });
+$('bJoin').onclick = () => {
+  const c = cleanCode($('codeIn').value);
+  if (c.length !== 5) return setErr('Codes have 5 characters.');
+  if (c === myCode) return setErr('That’s this device’s own code. Enter the code shown on your other device.');
+  join(c);
+};
+$('cpLink').onclick = async () => {
+  const link = location.origin + location.pathname + '#' + myCode;
+  try { await navigator.clipboard.writeText(link); toast('Link copied'); } catch(e){ toast('Couldn’t copy. Type the code instead.'); }
+};
+$('bDisc').onclick = () => { try { conn?.close(); } catch(e){} restart(); };
+$('bAgain').onclick = restart;
+
+/* ---------- transfer list ---------- */
+const ICONS = {
+  dl: '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg>',
+  sh: '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="m8.2 10.8 7.6-3.6M8.2 13.2l7.6 3.6"/></svg>',
+  file: '<svg class="i" style="width:26px;height:26px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>'
+};
+function makeThumb(th, blob, type, url){
+  th.innerHTML = '';
+  if (type.startsWith('image/')) { const im = document.createElement('img'); im.alt = ''; im.src = url; th.appendChild(im); }
+  else if (type.startsWith('video/')) { const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'metadata'; v.src = url + '#t=0.1'; th.appendChild(v); }
+  else th.innerHTML = ICONS.file;
+  th.onclick = () => openLightbox(url, type);
+}
+function openLightbox(url, type){
+  const lb = document.createElement('div'); lb.className = 'lb';
+  let el;
+  if (type.startsWith('image/')) { el = document.createElement('img'); el.src = url; el.alt = ''; }
+  else if (type.startsWith('video/')) { el = document.createElement('video'); el.src = url; el.controls = true; el.autoplay = true; el.playsInline = true; }
+  else { window.open(url, '_blank'); return; }
+  lb.appendChild(el);
+  lb.onclick = e => { if (e.target === lb) { lb.remove(); } };
+  document.addEventListener('keydown', function k(e){ if (e.key === 'Escape') { lb.remove(); document.removeEventListener('keydown', k); } });
+  document.body.appendChild(lb);
+}
+function addItem({name, size, type, dir, local}){
+  $('empty')?.remove();
+  const d = document.createElement('div'); d.className = 'item';
+  d.innerHTML = '<button class="thumb" aria-label="Preview"></button><div><div class="name"></div><div class="sub"></div><div class="bar"><i></i></div></div><div class="acts"></div>';
+  const th = d.querySelector('.thumb'), nm = d.querySelector('.name'), sb = d.querySelector('.sub'), bar = d.querySelector('.bar i');
+  nm.textContent = name; nm.title = name;
+  const label = dir === 'out' ? 'Sending' : 'Receiving';
+  sb.textContent = label + ' · ' + fmt(size);
+  th.innerHTML = ICONS.file;
+  if (local) makeThumb(th, local, type, URL.createObjectURL(local));
+  $('list').prepend(d);
+  return {
+    progress(p){ bar.style.width = Math.min(100, p * 100).toFixed(1) + '%'; sb.textContent = label + ' · ' + Math.round(p * 100) + '% of ' + fmt(size); },
+    finish(text){ d.querySelector('.bar').remove(); sb.textContent = text + ' · ' + fmt(size); sb.classList.add('ok'); },
+    fail(text){ d.querySelector('.bar')?.remove(); sb.textContent = text; sb.classList.add('bad'); },
+    received(blob){
+      const url = URL.createObjectURL(blob);
+      makeThumb(th, blob, type, url);
+      const acts = d.querySelector('.acts');
+      const a = document.createElement('a'); a.className = 'btn'; a.href = url; a.download = name; a.innerHTML = ICONS.dl + 'Save';
+      acts.appendChild(a);
+      const file = new File([blob], name, {type});
+      if (navigator.canShare && navigator.canShare({files: [file]})) {
+        const b = document.createElement('button'); b.className = 'ghost'; b.innerHTML = ICONS.sh + 'Share';
+        b.onclick = async () => { try { await navigator.share({files: [file]}); } catch(e){ if (e.name !== 'AbortError') toast('Sharing isn’t available for this file.'); } };
+        acts.appendChild(b);
+      }
+    }
+  };
+}
+
+/* ---------- sending ---------- */
+function sendFiles(files){
+  for (const f of files) queue = queue.then(() => sendOne(f)).catch(e => console.warn(e));
+}
+async function sendOne(f){
+  if (!conn || !conn.open) { toast('Not connected to another device.'); return; }
+  const type = f.type || 'application/octet-stream';
+  const ui = addItem({name: f.name, size: f.size, type, dir: 'out', local: f});
+  conn.send(JSON.stringify({t: 'meta', name: f.name, type, size: f.size}));
+  let off = 0;
+  while (off < f.size) {
+    while (conn && conn.open && conn.dataChannel && conn.dataChannel.bufferedAmount > HIGH) await sleep(15);
+    if (!conn || !conn.open) { ui.fail('Interrupted: the connection closed'); return; }
+    const buf = await f.slice(off, off + CHUNK).arrayBuffer();
+    conn.send(buf); off += buf.byteLength; ui.progress(off / f.size);
+  }
+  conn.send(JSON.stringify({t: 'end'}));
+  ui.finish('Sent');
+}
+function pick(e){ sendFiles([...e.target.files]); e.target.value = ''; }
+$('file').onchange = pick; $('fileAny').onchange = pick;
+const drop = $('drop');
+['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => sendFiles([...e.dataTransfer.files]));
+
+/* ---------- receiving ---------- */
+function onData(d){
+  if (typeof d === 'string') {
+    let m; try { m = JSON.parse(d); } catch(e){ return; }
+    if (m.t === 'meta') {
+      incoming = {m, parts: [], got: 0, ui: addItem({name: m.name, size: m.size, type: m.type || '', dir: 'in'})};
+      if (m.size === 0) incoming.ui.progress(1);
+    } else if (m.t === 'end' && incoming) {
+      const x = incoming; incoming = null;
+      if (x.got !== x.m.size) { x.ui.fail('Incomplete: received ' + fmt(x.got) + ' of ' + fmt(x.m.size)); return; }
+      x.ui.finish('Received');
+      x.ui.received(new Blob(x.parts, {type: x.m.type || 'application/octet-stream'}));
+    }
+  } else if (incoming && d && d.byteLength !== undefined) {
+    incoming.parts.push(d); incoming.got += d.byteLength;
+    incoming.ui.progress(incoming.got / incoming.m.size);
+  }
+}
+
+window.addEventListener('hashchange', () => { const h = cleanCode(location.hash.slice(1)); if (peer && peer.open && !conn && h.length === 5 && h !== myCode) join(h); });
+window.addEventListener('beforeunload', () => { try { peer?.destroy(); } catch(e){} });
+startPeer();
+</script>
+</body>
+</html>
