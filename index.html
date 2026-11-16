@@ -43,8 +43,8 @@ h2{font:700 18px var(--display);margin:0 0 6px}
 @media(min-width:760px){.grid{grid-template-columns:1.15fr 1fr}}
 
 /* the memorable element: the code as tiles joined by a beam */
-.code{display:flex;gap:8px;margin:6px 0 18px}
-.code span{flex:1;max-width:64px;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;background:var(--raised);border:1px solid var(--line);border-radius:12px;font:700 clamp(26px,7vw,36px) var(--display);color:var(--amber)}
+.code{display:flex;gap:6px;margin:6px 0 18px}
+.code span{flex:1;max-width:54px;aspect-ratio:3/4.2;display:flex;align-items:center;justify-content:center;background:var(--raised);border:1px solid var(--line);border-radius:12px;font:700 clamp(20px,5vw,30px) var(--display);color:var(--amber)}
 .beam{height:2px;margin:0 0 18px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--amber),transparent);opacity:.55}
 .qr{display:inline-block;background:#fff;padding:10px;border-radius:12px;margin-bottom:14px;line-height:0}
 .qr img,.qr canvas{width:156px!important;height:156px!important}
@@ -59,6 +59,7 @@ button.ghost:hover,.btn.ghost:hover{background:var(--raised)}
 button:disabled{opacity:.5;cursor:default}
 svg.i{width:18px;height:18px;flex:none}
 .err{color:var(--bad);font-size:14px;min-height:20px;margin:10px 0 0}
+.err.note{color:var(--mute)}
 
 .drop{display:block;text-align:center;border:2px dashed var(--line);border-radius:16px;padding:34px 16px;color:var(--mute);cursor:pointer;margin-bottom:12px;transition:border-color .15s,background .15s}
 .drop strong{display:block;color:var(--text);font:700 19px var(--display);margin-bottom:4px}
@@ -81,6 +82,10 @@ svg.i{width:18px;height:18px;flex:none}
 
 .lb{position:fixed;inset:0;background:rgba(5,7,14,.94);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
 .lb img,.lb video{max-width:100%;max-height:100%;border-radius:8px}
+.modal{position:fixed;inset:0;background:rgba(5,7,14,.82);display:flex;align-items:center;justify-content:center;padding:16px;z-index:70}
+.modal .box{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:24px;max-width:380px;width:100%}
+.modal .box p{margin:0}
+.modal .row{display:flex;gap:10px;margin-top:18px}.modal .row button{flex:1}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--raised);border:1px solid var(--line);padding:10px 16px;border-radius:12px;font-size:14px;z-index:60;max-width:90vw}
 </style>
 </head>
@@ -100,7 +105,7 @@ svg.i{width:18px;height:18px;flex:none}
     <div class="grid">
       <div class="panel">
         <h2>This device’s code</h2>
-        <p>Enter it on your other device, or scan the QR code with its camera.</p>
+        <p>Enter it on your other device, or scan the QR code with its camera. You’ll be asked to approve the connection before anything is shared.</p>
         <div id="code" class="code" aria-live="polite"></div>
         <div class="beam"></div>
         <div id="qr" class="qr" hidden></div>
@@ -111,7 +116,7 @@ svg.i{width:18px;height:18px;flex:none}
       <div class="panel">
         <h2>Got a code from another device?</h2>
         <p>Type it here to connect.</p>
-        <input id="codeIn" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="5" placeholder="•••••" aria-label="Pairing code">
+        <input id="codeIn" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="8" placeholder="••••••••" aria-label="Pairing code">
         <button id="bJoin" class="full" disabled>Connect</button>
         <p id="err" class="err" role="alert"></p>
       </div>
@@ -141,23 +146,25 @@ svg.i{width:18px;height:18px;flex:none}
   </section>
 </main>
 
+<div id="modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="box"><h2 id="mTitle">Allow this device to connect?</h2><p id="mText" style="color:var(--mute)"></p><div class="row"><button id="mDeny" class="ghost">Deny</button><button id="mAllow">Allow</button></div></div></div>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const PREFIX = 'beamxfer-';
-const CHUNK = 16384, HIGH = 1 << 20;
+const CHUNK = 16384, HIGH = 1 << 20, CODELEN = 8;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const fmt = n => n >= 1e9 ? (n/1e9).toFixed(2)+' GB' : n >= 1e6 ? (n/1e6).toFixed(1)+' MB' : Math.max(1, Math.round(n/1e3))+' KB';
-const cleanCode = s => { s = String(s||''); if (s.includes('#')) s = s.split('#').pop(); return s.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,5); };
-const genCode = () => Array.from(crypto.getRandomValues(new Uint8Array(5)), b => ALPHA[b % 32]).join('');
+const cleanCode = s => { s = String(s||''); if (s.includes('#')) s = s.split('#').pop(); return s.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,CODELEN); };
+const genCode = () => Array.from(crypto.getRandomValues(new Uint8Array(CODELEN)), b => ALPHA[b % 32]).join('');
 
-let peer, conn = null, myCode = '', incoming = null, queue = Promise.resolve(), wake = null, joinTimer = null;
+let peer, conn = null, approved = false, pending = null, approveTimer = null, myCode = '', incoming = null, queue = Promise.resolve(), wake = null, joinTimer = null;
 
 function setStatus(text, kind){ $('status').textContent = text; $('pill').className = 'pill ' + (kind||'wait'); }
 function toast(msg){ const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3500); }
-function setErr(msg){ $('err').textContent = msg || ''; }
+function setErr(msg, note){ const e = $('err'); e.textContent = msg || ''; e.classList.toggle('note', !!note); }
+function deviceLabel(){ const u = navigator.userAgent; const os = /Android/.test(u)?'Android':/iPhone|iPad/.test(u)?'iOS':/Windows/.test(u)?'Windows':/Mac/.test(u)?'Mac':/Linux/.test(u)?'Linux':'an unknown system'; const br = /Edg\//.test(u)?'Edge':/Firefox\//.test(u)?'Firefox':/Chrome\//.test(u)?'Chrome':/Safari\//.test(u)?'Safari':'a browser'; return br + ' on ' + os; }
 
 /* ---------- pairing ---------- */
 function showMyCode(){
@@ -171,20 +178,20 @@ function showMyCode(){
 
 function startPeer(){
   myCode = genCode();
-  peer = new Peer(PREFIX + myCode);
-  peer.on('open', () => {
+  const p = peer = new Peer(PREFIX + myCode);
+  p.on('open', () => {
     showMyCode();
     setStatus('Ready to pair', 'wait');
     const h = cleanCode(location.hash.slice(1));
-    if (h.length === 5 && h !== myCode) join(h);
+    if (h.length === CODELEN && h !== myCode) join(h);
   });
-  peer.on('connection', c => {
-    if (conn) { c.on('open', () => c.close()); return; }
-    setup(c);
+  p.on('connection', c => {
+    if (conn || pending) { c.on('open', () => { try { c.send(JSON.stringify({t: 'busy'})); } catch(e){} setTimeout(() => { try { c.close(); } catch(e){} }, 300); }); return; }
+    askApproval(c);
   });
-  peer.on('disconnected', () => { if (!conn) { setStatus('Reconnecting…', 'wait'); try { peer.reconnect(); } catch(e){} } });
-  peer.on('error', err => {
-    if (err.type === 'unavailable-id') { try { peer.destroy(); } catch(e){} startPeer(); return; }
+  p.on('disconnected', () => { if (!conn && !p.destroyed) { setStatus('Reconnecting…', 'wait'); try { p.reconnect(); } catch(e){} } });
+  p.on('error', err => {
+    if (err.type === 'unavailable-id') { try { p.destroy(); } catch(e){} startPeer(); return; }
     if (err.type === 'peer-unavailable') { joinFail('No device found with that code. Check it, and make sure Beam is open on the other device.'); return; }
     if (['network','server-error','socket-error','socket-closed','browser-incompatible'].includes(err.type)) {
       setStatus('Offline', 'off'); setErr('Can’t reach the pairing service. Check your internet connection and reload.');
@@ -196,45 +203,80 @@ function join(code){
   if (conn) return;
   setErr(''); setStatus('Connecting…', 'wait'); $('bJoin').disabled = true;
   let c;
-  try { c = peer.connect(PREFIX + code, {reliable: true, serialization: 'raw'}); }
+  try { c = peer.connect(PREFIX + code, {reliable: true, serialization: 'raw', metadata: {label: deviceLabel()}}); }
   catch(e){ return joinFail('Couldn’t start the connection. Reload and try again.'); }
   setup(c);
+  c.on('open', () => {
+    clearTimeout(joinTimer);
+    setStatus('Waiting for approval…', 'wait');
+    setErr('Approve the connection on the other device.', true);
+    joinTimer = setTimeout(() => { if (!approved) joinFail('The other device didn’t approve the connection in time.'); }, 70000);
+  });
   clearTimeout(joinTimer);
   joinTimer = setTimeout(() => { if (conn && !conn.open) joinFail('Connecting took too long. Check the code, or try both devices on the same Wi-Fi.'); }, 20000);
 }
 function joinFail(msg){
   clearTimeout(joinTimer);
-  if (conn && !conn.open) { try { conn.close(); } catch(e){} }
-  conn = null; $('bJoin').disabled = false;
+  const c = conn; conn = null;
+  if (c && !approved) { try { c.close(); } catch(e){} }
+  $('bJoin').disabled = false;
   setStatus('Ready to pair', 'wait'); setErr(msg);
 }
 
 function setup(c){
   conn = c;
-  c.on('open', async () => {
-    clearTimeout(joinTimer);
-    $('pair').hidden = true; $('xfer').hidden = false; $('banner').hidden = true;
-    setStatus('Connected', 'on');
-    try { wake = await navigator.wakeLock?.request('screen'); } catch(e){}
-  });
   c.on('data', onData);
   c.on('close', onClose);
-  c.on('error', e => { console.warn(e); if (!c.open) joinFail('Couldn’t connect to that device.'); });
+  c.on('error', e => { console.warn(e); if (!approved && conn === c) joinFail('Couldn’t connect to that device.'); });
+}
+function enter(){
+  approved = true; clearTimeout(joinTimer); setErr('');
+  $('pair').hidden = true; $('xfer').hidden = false; $('banner').hidden = true;
+  setStatus('Connected', 'on');
+  try { navigator.wakeLock?.request('screen').then(w => { wake = w; }).catch(() => {}); } catch(e){}
 }
 function onClose(){
-  const was = conn && conn.open !== undefined;
-  conn = null; incoming = null;
+  const was = approved;
+  conn = null; incoming = null; approved = false;
   try { wake?.release(); } catch(e){} wake = null;
-  if (!$('xfer').hidden) { setStatus('Disconnected', 'off'); $('banner').hidden = false; }
-  else if (was) { joinFail('The connection closed before it finished. Try again.'); }
+  if (was) { setStatus('Disconnected', 'off'); $('banner').hidden = false; }
+  else {
+    clearTimeout(joinTimer); $('bJoin').disabled = false; setStatus('Ready to pair', 'wait');
+    const e = $('err'); if (!e.textContent || e.classList.contains('note')) setErr('The other device closed the connection.');
+  }
 }
+
+/* ---------- approving incoming connections ---------- */
+function askApproval(c){
+  pending = c;
+  c.on('data', () => {});   // ignore everything until approved
+  c.on('close', () => {
+    if (pending === c) { pending = null; clearTimeout(approveTimer); $('modal').hidden = true; toast('The connection request was cancelled.'); }
+  });
+  c.on('open', () => {
+    const who = (c.metadata && typeof c.metadata.label === 'string') ? c.metadata.label.slice(0, 60) : 'An unknown device';
+    $('mText').textContent = who + ' wants to connect and exchange files. Allow it only if it’s your own device and you just entered or scanned this code.';
+    $('modal').hidden = false; $('mDeny').focus();
+    clearTimeout(approveTimer); approveTimer = setTimeout(() => decide(false), 60000);
+  });
+}
+function decide(ok){
+  const c = pending; if (!c) return;
+  pending = null; clearTimeout(approveTimer); $('modal').hidden = true;
+  if (ok && c.open) { try { c.send(JSON.stringify({t: 'ok'})); } catch(e){} setup(c); enter(); return; }
+  try { c.send(JSON.stringify({t: 'no'})); } catch(e){}
+  toast('Connection denied. This device now has a new code.');
+  setTimeout(() => { try { c.close(); } catch(e){} try { peer.destroy(); } catch(e){} startPeer(); }, 400);
+}
+$('mAllow').onclick = () => decide(true);
+$('mDeny').onclick = () => decide(false);
 function restart(){ history.replaceState(null, '', location.pathname); location.reload(); }
 
 $('codeIn').addEventListener('input', e => { e.target.value = cleanCode(e.target.value); setErr(''); });
 $('codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('bJoin').click(); });
 $('bJoin').onclick = () => {
   const c = cleanCode($('codeIn').value);
-  if (c.length !== 5) return setErr('Codes have 5 characters.');
+  if (c.length !== CODELEN) return setErr('Codes have ' + CODELEN + ' characters.');
   if (c === myCode) return setErr('That’s this device’s own code. Enter the code shown on your other device.');
   join(c);
 };
@@ -305,7 +347,7 @@ function sendFiles(files){
   for (const f of files) queue = queue.then(() => sendOne(f)).catch(e => console.warn(e));
 }
 async function sendOne(f){
-  if (!conn || !conn.open) { toast('Not connected to another device.'); return; }
+  if (!conn || !conn.open || !approved) { toast('Not connected to another device.'); return; }
   const type = f.type || 'application/octet-stream';
   const ui = addItem({name: f.name, size: f.size, type, dir: 'out', local: f});
   conn.send(JSON.stringify({t: 'meta', name: f.name, type, size: f.size}));
@@ -330,6 +372,10 @@ drop.addEventListener('drop', e => sendFiles([...e.dataTransfer.files]));
 function onData(d){
   if (typeof d === 'string') {
     let m; try { m = JSON.parse(d); } catch(e){ return; }
+    if (m.t === 'ok') { if (conn && !approved) enter(); return; }
+    if (m.t === 'no') { if (!approved) joinFail('The other device denied the connection.'); return; }
+    if (m.t === 'busy') { if (!approved) joinFail('That device is already connected to, or pairing with, another device.'); return; }
+    if (!approved) return;
     if (m.t === 'meta') {
       incoming = {m, parts: [], got: 0, ui: addItem({name: m.name, size: m.size, type: m.type || '', dir: 'in'})};
       if (m.size === 0) incoming.ui.progress(1);
@@ -339,13 +385,13 @@ function onData(d){
       x.ui.finish('Received');
       x.ui.received(new Blob(x.parts, {type: x.m.type || 'application/octet-stream'}));
     }
-  } else if (incoming && d && d.byteLength !== undefined) {
+  } else if (approved && incoming && d && d.byteLength !== undefined) {
     incoming.parts.push(d); incoming.got += d.byteLength;
     incoming.ui.progress(incoming.got / incoming.m.size);
   }
 }
 
-window.addEventListener('hashchange', () => { const h = cleanCode(location.hash.slice(1)); if (peer && peer.open && !conn && h.length === 5 && h !== myCode) join(h); });
+window.addEventListener('hashchange', () => { const h = cleanCode(location.hash.slice(1)); if (peer && peer.open && !conn && !pending && h.length === CODELEN && h !== myCode) join(h); });
 window.addEventListener('beforeunload', () => { try { peer?.destroy(); } catch(e){} });
 startPeer();
 </script>
