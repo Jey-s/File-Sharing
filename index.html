@@ -82,6 +82,18 @@ svg.i{width:18px;height:18px;flex:none}
 
 .lb{position:fixed;inset:0;background:rgba(5,7,14,.94);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
 .lb img,.lb video{max-width:100%;max-height:100%;border-radius:8px}
+.priv{margin-top:16px}
+.priv ul{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:14px}
+.priv li{display:grid;grid-template-columns:22px 1fr;gap:10px;color:var(--mute);font-size:14px}
+.priv li strong{color:var(--text);font-weight:600}
+.priv svg{width:20px;height:20px;color:var(--ok);margin-top:2px}
+.namefield{margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;color:var(--mute);font-size:14px}
+.namefield input[type=text]{flex:1;min-width:180px;width:auto;margin:0;font:500 15px var(--body);letter-spacing:normal;text-transform:none;text-align:left;padding:10px 12px;border-radius:10px}
+.details{margin:16px 0 0;display:grid;gap:8px}
+.details div{display:flex;justify-content:space-between;gap:14px;background:var(--raised);border-radius:10px;padding:10px 12px;font-size:14px}
+.details dt{color:var(--mute);flex:none}.details dd{margin:0;font-weight:600;text-align:right;word-break:break-all}
+.lockline{display:flex;gap:8px;align-items:flex-start;color:var(--mute);font-size:13px;margin:0 0 14px}
+.lockline svg{width:16px;height:16px;color:var(--ok);flex:none;margin-top:2px}
 .modal{position:fixed;inset:0;background:rgba(5,7,14,.82);display:flex;align-items:center;justify-content:center;padding:16px;z-index:70}
 .modal .box{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:24px;max-width:380px;width:100%}
 .modal .box p{margin:0}
@@ -121,9 +133,21 @@ svg.i{width:18px;height:18px;flex:none}
         <p id="err" class="err" role="alert"></p>
       </div>
     </div>
+  <label class="namefield">This device is called
+      <input id="devName" type="text" maxlength="40" autocomplete="off" spellcheck="false" aria-label="This device’s name">
+    </label>
+    <div class="panel priv">
+      <h2>Private by design</h2>
+      <ul>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span><strong>Nothing is stored.</strong> Not on GitHub, not on any server. Your photos and videos are never uploaded. They exist only on your two devices, and only until you save them or close the page.</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h13M17 4l3 3-3 3M17 17H4M7 14l-3 3 3 3"/></svg><span><strong>A direct, encrypted connection.</strong> Files travel straight from one device to the other, encrypted end to end. No server or relay sits in the middle of a transfer.</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg><span><strong>Pairing only.</strong> A free public service (PeerJS) briefly helps your devices find each other. It handles the pairing code and connection details, never your files, and public lookup servers only tell each device its own address. Each device learns the other’s IP address, and you see it before you allow a connection.</span></li>
+      </ul>
+    </div>
   </section>
 
   <section id="xfer" hidden>
+    <p class="lockline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>Encrypted directly between your two devices. Nothing is uploaded or stored anywhere.</span></p>
     <div id="banner" class="banner" hidden>
       <span>The other device disconnected.</span>
       <button id="bAgain">Pair again</button>
@@ -146,7 +170,7 @@ svg.i{width:18px;height:18px;flex:none}
   </section>
 </main>
 
-<div id="modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="box"><h2 id="mTitle">Allow this device to connect?</h2><p id="mText" style="color:var(--mute)"></p><div class="row"><button id="mDeny" class="ghost">Deny</button><button id="mAllow">Allow</button></div></div></div>
+<div id="modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="box"><h2 id="mTitle">Allow this device to connect?</h2><p id="mText" style="color:var(--mute)"></p><dl class="details"><div><dt>Device name</dt><dd id="mName"></dd></div><div><dt>IP address</dt><dd id="mIp">Checking…</dd></div><div><dt>Network</dt><dd id="mNet"></dd></div></dl><p class="fine" style="color:var(--mute);font-size:13px;margin-top:12px">The name is chosen by the other device. The IP address is read from the connection itself. Files stay encrypted and are never stored anywhere.</p><div class="row"><button id="mDeny" class="ghost">Deny</button><button id="mAllow">Allow</button></div></div></div>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
@@ -159,11 +183,12 @@ const fmt = n => n >= 1e9 ? (n/1e9).toFixed(2)+' GB' : n >= 1e6 ? (n/1e6).toFixe
 const cleanCode = s => { s = String(s||''); if (s.includes('#')) s = s.split('#').pop(); return s.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,CODELEN); };
 const genCode = () => Array.from(crypto.getRandomValues(new Uint8Array(CODELEN)), b => ALPHA[b % 32]).join('');
 
-let peer, conn = null, approved = false, pending = null, approveTimer = null, myCode = '', incoming = null, queue = Promise.resolve(), wake = null, joinTimer = null;
+let peer, conn = null, approved = false, pending = null, approveTimer = null, peerName = '', myCode = '', incoming = null, queue = Promise.resolve(), wake = null, joinTimer = null;
 
 function setStatus(text, kind){ $('status').textContent = text; $('pill').className = 'pill ' + (kind||'wait'); }
 function toast(msg){ const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3500); }
 function setErr(msg, note){ const e = $('err'); e.textContent = msg || ''; e.classList.toggle('note', !!note); }
+function myName(){ return (($('devName') && $('devName').value || '').trim() || deviceLabel()).slice(0, 40); }
 function deviceLabel(){ const u = navigator.userAgent; const os = /Android/.test(u)?'Android':/iPhone|iPad/.test(u)?'iOS':/Windows/.test(u)?'Windows':/Mac/.test(u)?'Mac':/Linux/.test(u)?'Linux':'an unknown system'; const br = /Edg\//.test(u)?'Edge':/Firefox\//.test(u)?'Firefox':/Chrome\//.test(u)?'Chrome':/Safari\//.test(u)?'Safari':'a browser'; return br + ' on ' + os; }
 
 /* ---------- pairing ---------- */
@@ -178,7 +203,7 @@ function showMyCode(){
 
 function startPeer(){
   myCode = genCode();
-  const p = peer = new Peer(PREFIX + myCode);
+  const p = peer = new Peer(PREFIX + myCode, {config: {iceServers: [{urls: 'stun:stun.l.google.com:19302'}, {urls: 'stun:stun1.l.google.com:19302'}]}});
   p.on('open', () => {
     showMyCode();
     setStatus('Ready to pair', 'wait');
@@ -203,7 +228,7 @@ function join(code){
   if (conn) return;
   setErr(''); setStatus('Connecting…', 'wait'); $('bJoin').disabled = true;
   let c;
-  try { c = peer.connect(PREFIX + code, {reliable: true, serialization: 'raw', metadata: {label: deviceLabel()}}); }
+  try { c = peer.connect(PREFIX + code, {reliable: true, serialization: 'raw', metadata: {label: myName()}}); }
   catch(e){ return joinFail('Couldn’t start the connection. Reload and try again.'); }
   setup(c);
   c.on('open', () => {
@@ -213,7 +238,7 @@ function join(code){
     joinTimer = setTimeout(() => { if (!approved) joinFail('The other device didn’t approve the connection in time.'); }, 70000);
   });
   clearTimeout(joinTimer);
-  joinTimer = setTimeout(() => { if (conn && !conn.open) joinFail('Connecting took too long. Check the code, or try both devices on the same Wi-Fi.'); }, 20000);
+  joinTimer = setTimeout(() => { if (conn && !conn.open) joinFail('Couldn’t reach that device directly. Beam never sends files through a relay, so both devices need a network that allows direct connections. The same Wi-Fi works best.'); }, 20000);
 }
 function joinFail(msg){
   clearTimeout(joinTimer);
@@ -232,12 +257,12 @@ function setup(c){
 function enter(){
   approved = true; clearTimeout(joinTimer); setErr('');
   $('pair').hidden = true; $('xfer').hidden = false; $('banner').hidden = true;
-  setStatus('Connected', 'on');
+  setStatus(peerName ? 'Connected to ' + peerName : 'Connected', 'on');
   try { navigator.wakeLock?.request('screen').then(w => { wake = w; }).catch(() => {}); } catch(e){}
 }
 function onClose(){
   const was = approved;
-  conn = null; incoming = null; approved = false;
+  conn = null; incoming = null; approved = false; peerName = '';
   try { wake?.release(); } catch(e){} wake = null;
   if (was) { setStatus('Disconnected', 'off'); $('banner').hidden = false; }
   else {
@@ -247,23 +272,42 @@ function onClose(){
 }
 
 /* ---------- approving incoming connections ---------- */
+const isPrivate = ip => /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|fe80:|f[cd][0-9a-f]{2}:)/i.test(ip);
+async function remoteInfo(c){
+  try {
+    const stats = await c.peerConnection.getStats();
+    const map = {}; let pair = null;
+    stats.forEach(r => { map[r.id] = r; });
+    stats.forEach(r => { if (r.type === 'transport' && r.selectedCandidatePairId) pair = map[r.selectedCandidatePairId]; });
+    if (!pair) stats.forEach(r => { if (r.type === 'candidate-pair' && (r.selected || (r.nominated && r.state === 'succeeded'))) pair = r; });
+    const rc = pair && map[pair.remoteCandidateId];
+    return rc ? {ip: rc.address || rc.ip || ''} : null;
+  } catch(e){ return null; }
+}
 function askApproval(c){
   pending = c;
   c.on('data', () => {});   // ignore everything until approved
   c.on('close', () => {
     if (pending === c) { pending = null; clearTimeout(approveTimer); $('modal').hidden = true; toast('The connection request was cancelled.'); }
   });
-  c.on('open', () => {
-    const who = (c.metadata && typeof c.metadata.label === 'string') ? c.metadata.label.slice(0, 60) : 'An unknown device';
-    $('mText').textContent = who + ' wants to connect and exchange files. Allow it only if it’s your own device and you just entered or scanned this code.';
+  c.on('open', async () => {
+    const who = (c.metadata && typeof c.metadata.label === 'string' && c.metadata.label.trim()) ? c.metadata.label.trim().slice(0, 40) : 'Unknown device';
+    c.peerName = who;
+    $('mText').textContent = 'A device wants to connect and exchange files. Allow it only if it’s your own and you just entered or scanned this code.';
+    $('mName').textContent = who; $('mIp').textContent = 'Checking…'; $('mNet').textContent = '';
     $('modal').hidden = false; $('mDeny').focus();
     clearTimeout(approveTimer); approveTimer = setTimeout(() => decide(false), 60000);
+    const info = await remoteInfo(c);
+    if (pending !== c) return;
+    const ip = info && info.ip;
+    if (ip && !/\.local$/i.test(ip)) { $('mIp').textContent = ip; $('mNet').textContent = isPrivate(ip) ? 'Same local network' : 'Over the internet'; }
+    else { $('mIp').textContent = 'Hidden by the browser'; $('mNet').textContent = ip ? 'Same local network' : 'Unknown'; }
   });
 }
 function decide(ok){
   const c = pending; if (!c) return;
   pending = null; clearTimeout(approveTimer); $('modal').hidden = true;
-  if (ok && c.open) { try { c.send(JSON.stringify({t: 'ok'})); } catch(e){} setup(c); enter(); return; }
+  if (ok && c.open) { try { c.send(JSON.stringify({t: 'ok', label: myName()})); } catch(e){} peerName = c.peerName || ''; setup(c); enter(); return; }
   try { c.send(JSON.stringify({t: 'no'})); } catch(e){}
   toast('Connection denied. This device now has a new code.');
   setTimeout(() => { try { c.close(); } catch(e){} try { peer.destroy(); } catch(e){} startPeer(); }, 400);
@@ -372,7 +416,7 @@ drop.addEventListener('drop', e => sendFiles([...e.dataTransfer.files]));
 function onData(d){
   if (typeof d === 'string') {
     let m; try { m = JSON.parse(d); } catch(e){ return; }
-    if (m.t === 'ok') { if (conn && !approved) enter(); return; }
+    if (m.t === 'ok') { if (conn && !approved) { peerName = typeof m.label === 'string' ? m.label.trim().slice(0, 40) : ''; enter(); } return; }
     if (m.t === 'no') { if (!approved) joinFail('The other device denied the connection.'); return; }
     if (m.t === 'busy') { if (!approved) joinFail('That device is already connected to, or pairing with, another device.'); return; }
     if (!approved) return;
@@ -393,6 +437,7 @@ function onData(d){
 
 window.addEventListener('hashchange', () => { const h = cleanCode(location.hash.slice(1)); if (peer && peer.open && !conn && !pending && h.length === CODELEN && h !== myCode) join(h); });
 window.addEventListener('beforeunload', () => { try { peer?.destroy(); } catch(e){} });
+$('devName').value = deviceLabel();
 startPeer();
 </script>
 </body>
